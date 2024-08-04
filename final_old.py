@@ -119,4 +119,4 @@ print(f"Rows from Scheduled Generation: {len(new_df_scheduled)}")
 print(f"Rows from Non-Scheduled Generation: {len(new_df_non_scheduled)}")
 print(f"Rows from New Developments: {len(new_df_new_developments)}")
 if not new_df_wind.empty:
-    print(f"Rows from Existing Wind Generation: {len(new_df_wind)}")
+    print(f"Rows from Existing Wind Generation: {len(new_df_wind)}") 
