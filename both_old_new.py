@@ -169,4 +169,4 @@ combined_df.to_excel(output_file, index=False)
 print(f"\nData has been extracted and saved to '{output_file}'")
 
 # Print total number of rows extracted
-print(f"Total rows extracted: {len(combined_df)}")
+print(f"Total rows extracted: {len(combined_df)}") 
