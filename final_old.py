@@ -8,6 +8,16 @@ def extract_region(filename):
     states = ['NSW', 'QLD', 'SA', 'TAS', 'VIC']
     return next((state for state in states if state in filename), 'Unknown')
 
+def translate_region(region):
+    region_mapping = {
+        'NSW': 'NSW1',
+        'QLD': 'QLD1',
+        'SA': 'SA1',
+        'TAS': 'TAS1',
+        'VIC': 'VIC1'
+    }
+    return region_mapping.get(region, region)
+
 def find_sheet_name(excel_file, possible_names):
     with pd.ExcelFile(excel_file) as xls:
         return next((name for name in possible_names if name in xls.sheet_names), None)
@@ -18,9 +28,20 @@ def is_note_or_statement(text):
     return text.startswith('Note:') or text.startswith('*') or ':' in text
 
 def extract_max_capacity(capacity_str):
-    if isinstance(capacity_str, str) and '-' in capacity_str:
-        return max(map(float, re.findall(r'\d+(?:\.\d+)?', capacity_str)))
-    return capacity_str
+    if not capacity_str or not isinstance(capacity_str, (str, int, float)):
+        return ''
+    if isinstance(capacity_str, (int, float)):
+        return capacity_str
+    numbers = re.findall(r'\d+(?:\.\d+)?', str(capacity_str))
+    return max(map(float, numbers)) if numbers else capacity_str
+
+def translate_unit_status(status, sheet_type):
+    if sheet_type == 'new_developments':
+        if status == 'Pub An':
+            return 'Publicly Announced'
+        elif status == 'Com':
+            return 'Committed'
+    return status
 
 def process_sheet(df, region, sheet_type):
     print(f"\nProcessing {sheet_type} sheet:")
@@ -46,14 +67,18 @@ def process_sheet(df, region, sheet_type):
                               row.get('Unit Numbers and Nameplate Capacity (MW)') or 
                               row.get('Nameplate Capacity (MW)', ''))
         
+        unit_status = (row.get(service_status_column) if service_status_column else
+                       (row.get('Unit Status', 'Unknown') if sheet_type == 'new_developments' 
+                        else ('Committed' if committed_encountered else 'In Service')))
+        
+        unit_status = translate_unit_status(unit_status, sheet_type)
+        
         new_row = {
-            'Region': region,
+            'Region': translate_region(region),
             'Site Name': site_name,
             'Technology Type': row.get('Plant Type') or row.get('Technology Type') or row.get('Generation Type', ''),
             'Nameplate Capacity': extract_max_capacity(nameplate_capacity),
-            'Unit Status': (row.get(service_status_column) if service_status_column else
-                            (row.get('Unit Status', 'Unknown') if sheet_type == 'new_developments' 
-                             else ('Committed' if committed_encountered else 'In Service')))
+            'Unit Status': unit_status
         }
         
         rows_to_keep.append(new_row)
@@ -119,4 +144,4 @@ print(f"Rows from Scheduled Generation: {len(new_df_scheduled)}")
 print(f"Rows from Non-Scheduled Generation: {len(new_df_non_scheduled)}")
 print(f"Rows from New Developments: {len(new_df_new_developments)}")
 if not new_df_wind.empty:
-    print(f"Rows from Existing Wind Generation: {len(new_df_wind)}") 
+    print(f"Rows from Existing Wind Generation: {len(new_df_wind)}")
